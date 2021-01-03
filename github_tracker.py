@@ -25,7 +25,7 @@ def get_dict_repositories(names_list, details):
 if __name__ == '__main__':
     url_parameter = 'https://api.github.com/users/SimonDuperray/repos'
     headers_parameter = {
-        "Authorization": "1a75945b888f1f9bef8a616766542f31abf845b2"
+        "Authorization": ""
     }
 
     repositories = get_repositories(url_parameter, headers_parameter)
