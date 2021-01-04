@@ -9,57 +9,35 @@ import matplotlib.pyplot as plt
 import operator
 
 """
-Infos to scrap:
-    * % languages          | OK
-    * nb repos             | OK
-    * nb commits graph     | OK
-    * name                 | OK
-    * id                   | OK
-    * owner                | OK
-    * created_at           | OK
-    * updated_at           | OK
-    * pushed_at            | OK
-
-    *********************************
-    get messages and dates
-        - {
-            name_list[0]: {
-                'messages': [...],
-                'dates': [...]
-            },
-            name_list[1]: {
-                'messages': [...],
-                'dates': [...]
-            },
-            ..., 
-            name_list[-1]: {
-                'messages': [...],
-                'dates': [...]
-            }
-        }
-    *********************************
+    |=======================================|
+    |     data         |  SCRAP  |  RESULT  |
+    |=======================================|
+    | nb repos         |   OK    |    OK    |
+    |=======================================|
+    | nb commits graph |   OK    |          |
+    |=======================================|
+    | name             |   OK    |    //    |
+    |=======================================|
+    | % languages      |   OK    |    OK    |
+    |=======================================|
+    | id               |   OK    |    //    |
+    |=======================================|
+    | owner            |   OK    |    OK    |
+    |=======================================|
+    | created_at       |   OK    |    OK    |
+    |=======================================|
 """
 
 base_url = "https://api.github.com"
-
-def is_included(elem_list, found_to_list):
-    for item in elem_list:
-        for isin in found_to_list:
-            if item in isin:
-                return True
-                break
 
 def get_repositories(url, headers):
     return requests.get(url, headers=headers).json()
 
 def get_required_data(repos_list):
-    name_list, id_list, creation_list, update_list, push_list, language_list = [], [], [], [], [], []
+    name_list, creation_list, language_list = [], [], []
     for item in repos_list:
         name_list.append(item['name'])
-        id_list.append(item['id'])
         creation_list.append(item['created_at'])
-        update_list.append(item['updated_at'])
-        push_list.append(item['pushed_at'])
         language_list.append(item['language'])
     # in language_list, replace None by NaN
     for m in range(len(language_list)):
@@ -68,7 +46,7 @@ def get_required_data(repos_list):
         else:
             pass
     
-    return name_list, id_list, creation_list, update_list, push_list, language_list
+    return name_list, creation_list, language_list
 
 def get_date_and_hour(creation):
     return [index[0:10] for index in creation], [index[-9:-1] for index in creation]
@@ -120,13 +98,10 @@ def create_messages_dates_commits(details_repos_dict_loaded, name_list):
 def check_required_data(name, id, language, creation_date, creation_hour, owner, push_date, push_hour):
     print("\n***** check_required_data *****\n")
     print("name: "+str(name)+"\n")
-    print("id: "+str(id)+"\n")
     print("language: "+str(language)+"\n")
     print("creation_date: "+str(creation_date)+"\n")
     print("creation_hour: "+str(creation_hour)+"\n")
     print("owner: "+str(owner)+"\n")
-    print("push_date: "+str(push_date)+"\n")
-    print("push_hour: "+str(push_hour)+"\n")
     print("***** END CHECKING *****\n")
 
 def get_donut_pie(data_list):
@@ -163,6 +138,29 @@ def get_languages_proportion_txt(language_list, repositories_number):
         to_return += "{cpt}. {language} -> {pourcent}%".format(cpt=o, language=list(final_pourcentage_languages.keys())[o], pourcent=list(final_pourcentage_languages.values())[o])+"\n"
     return to_return
 
+def create_histogram(first_list, second_list, third_list, title):
+    fig, axs = plt.subplots(2, 2, sharey=True, tight_layout=True)
+    axs[0][0].hist(first_list)
+    axs[0][1].hist(second_list)
+    axs[1][0].hist(third_list)
+    plt.show()
+    
+
+def stats_creation_date(creation_date_list, languages_list):
+    years_list, months_list, days_list = [], [], []
+    for i in range(len(creation_date_list)):
+        current_splitted_list = creation_date_list[i].split('-')
+        years_list.append(current_splitted_list[0])
+        months_list.append(current_splitted_list[1])
+        days_list.append(current_splitted_list[2])
+    years_list.sort()
+    months_list.sort()
+    days_list.sort()
+    counted_years = collections.Counter(years_list)
+    counted_months = collections.Counter(months_list)
+    counted_days = collections.Counter(days_list)
+    create_histogram(first_list=years_list, second_list=months_list, third_list=days_list, title="Months")
+
 if __name__ == '__main__':
     url_parameter = 'https://api.github.com/users/SimonDuperray/repos'
     headers_parameter = {
@@ -170,11 +168,13 @@ if __name__ == '__main__':
     }
 
     # get all repositories of owner
-    repositories = get_repositories(url_parameter, headers_parameter)
-
+    # repositories = get_repositories(url_parameter, headers_parameter)
+    with open('database/global_repos.json') as global_reader:
+        repositories = json.load(global_reader)
+    
     # get lists of precise data from repositories list
     try:
-        name_list, id_list, creation_list, update_list, push_list, language_list = get_required_data(repositories)
+        name_list, creation_list, language_list = get_required_data(repositories)
     except KeyError as error:
         # print("KeyError (get_required_data()): "+str(error))
         print("\n")
@@ -193,15 +193,16 @@ if __name__ == '__main__':
 
     # get date and hour from creation_list
     creation_date_list, creation_hour_list = get_date_and_hour(creation_list)
-    push_date_list, push_hour_list = get_date_and_hour(push_list)
 
     # create messages_dates_commits dict
     messages_dates_commits = create_messages_dates_commits(details_repos_dict_loaded, name_list)
 
     # result: number
-    print(f"********************************************\nI detected {repositories_number} repositories.\n********************************************")
+    print("********************************************\nHello {login} ! I have detected {number_repo} repos on your Github.\n********************************************".format(login=owner['login'], number_repo=repositories_number))
 
     # result: languages proportion graph
-    # get_donut_pie(language_list)
+    get_donut_pie(language_list)
     # result: languages proportion text
     print("This is your used languages distribution:\n"+str(get_languages_proportion_txt(language_list, repositories_number))+"********************************************")
+
+    stats_creation_date(creation_date_list=creation_date_list, languages_list=language_list)
